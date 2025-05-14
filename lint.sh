@@ -13,4 +13,4 @@ fi
 npm install
 
 # 例: ESLint を変更ファイルに対して実行
-npm lint "${CHANGED_FILES[@]}"
+npm run lint "${CHANGED_FILES[@]}"
