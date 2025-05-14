@@ -1,6 +1,7 @@
 #!/bin/bash
 set -e
 
+npm install
 
 echo "Running ESLint..."
 
