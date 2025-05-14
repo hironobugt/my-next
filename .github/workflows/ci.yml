@@ -1,0 +1,14 @@
+# my-next/.github/workflows/ci.yml
+name: My Next.js CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  use-common-workflow:
+    uses: your-org/my-app/.github/workflows/common.yml@main
+    with:
+      lint_script: ./lint.sh
