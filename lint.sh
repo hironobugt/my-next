@@ -1,6 +1,7 @@
 #!/bin/bash
 set -e
 
+# 開始宣言
 echo "Running ESLint..."
 
 # 差分 lint の場合
