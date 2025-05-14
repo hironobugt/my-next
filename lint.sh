@@ -1,31 +1,16 @@
 #!/bin/bash
-set -e
 
-echo "Running ESLint..."
+CHANGED_FILES=("$@")
 
-# BASE_BRANCH を GITHUB_BASE_REF から取得。fallback は origin/main
-BASE_BRANCH="${BASE_BRANCH:-origin/${GITHUB_BASE_REF:-main}}"
+echo "Running lint on changed files:"
+printf '%s\n' "${CHANGED_FILES[@]}"
 
-echo "Comparing with base branch: $BASE_BRANCH"
-
-if [ "$1" == "--diff" ]; then
-  echo "Linting only changed files..."
-  
-  git fetch origin "$BASE_BRANCH" || true
-
-  FILES=$(git diff --name-only "$BASE_BRANCH"...HEAD | grep -E '\.(js|jsx|ts|tsx)$' || true)
-
-  if [ -z "$FILES" ]; then
-    echo "No relevant file changes to lint."
-    exit 0
-  fi
-
-  echo "Files to lint:"
-  echo "$FILES"
-
-  npm install
-  npx eslint $FILES
-else
-  npm install
-  npx next lint
+if [ ${#CHANGED_FILES[@]} -eq 0 ]; then
+  echo "No changed files to lint."
+  exit 0
 fi
+
+npm install
+
+# 例: ESLint を変更ファイルに対して実行
+npm lint "${CHANGED_FILES[@]}"

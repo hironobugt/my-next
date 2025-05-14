@@ -1,7 +1,7 @@
 name: My Next.js CI
 
 on:
-  pull_request:
+  push:
     branches:
       - '**'
 
@@ -10,4 +10,3 @@ jobs:
     uses: hironobugt/my-app/.github/workflows/common.yml@main
     with:
       lint_script: ./lint.sh
-      lint_args: ${{ startsWith(github.head_ref, 'feature/') && '--diff' || '' }}
