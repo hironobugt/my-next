@@ -9,6 +9,6 @@ on:
 
 jobs:
   use-common-workflow:
-    uses: your-org/my-app/.github/workflows/common.yml@main
+    uses: hironobugt/my-app/.github/workflows/common.yml@main
     with:
       lint_script: ./lint.sh
