@@ -2,6 +2,7 @@ name: My Next.js CI
 
 on:
   pull_request:
+  
     branches:
       - '**'
 
