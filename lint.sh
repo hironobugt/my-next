@@ -1,16 +1,26 @@
 #!/bin/bash
 
-CHANGED_FILES=("$@")
+set -e
 
-echo "Running lint on changed files:"
-printf '%s\n' "${CHANGED_FILES[@]}"
+# 差分ベースの取得（pull_request 環境で）
+if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+  echo "Fetching base branch for diff..."
+  git fetch origin "${GITHUB_BASE_REF}"
 
-if [ ${#CHANGED_FILES[@]} -eq 0 ]; then
-  echo "No changed files to lint."
+  CHANGED_FILES=$(git diff --name-only origin/"${GITHUB_BASE_REF}"...HEAD -- '*.ts' '*.tsx')
+else
+  echo "Non-PR event detected. Linting everything."
+  CHANGED_FILES=$(git ls-files '*.ts' '*.tsx')
+fi
+
+if [ -z "$CHANGED_FILES" ]; then
+  echo "No TypeScript files changed. Skipping lint."
   exit 0
 fi
 
+echo "Linting changed files:"
+echo "$CHANGED_FILES"
+
 npm install
 
-# 例: ESLint を変更ファイルに対して実行
-npm run lint "${CHANGED_FILES[@]}"
+npm run lint $CHANGED_FILES
