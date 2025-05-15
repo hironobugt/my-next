@@ -8,10 +8,13 @@ echo "🔍 Linting changed TypeScript files..."
 git fetch --unshallow || true
 git fetch origin "${GITHUB_BASE_REF}"
 
-echo git branch "${GITHUB_BASE_REF}"
 
 # Get changed files
 CHANGED_FILES=$(git diff --name-only origin/"${GITHUB_BASE_REF}"...HEAD -- '*.ts' '*.tsx')
+
+
+echo git branch is
+echo "$GITHUB_BASE_REF"
 
 if [ -z "$CHANGED_FILES" ]; then
   echo "✅ No relevant files changed."
