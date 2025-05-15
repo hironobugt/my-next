@@ -1,8 +1,7 @@
 name: My Next.js CI
 
 on:
-  pull_request:
-  
+  push:
     branches:
       - '**'
 
