@@ -2,25 +2,21 @@
 
 set -e
 
-# 差分ベースの取得（pull_request 環境で）
-if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
-  echo "Fetching base branch for diff..."
-  git fetch origin "${GITHUB_BASE_REF}"
+echo "🔍 Linting changed TypeScript files..."
 
-  CHANGED_FILES=$(git diff --name-only origin/"${GITHUB_BASE_REF}"...HEAD -- '*.ts' '*.tsx')
-else
-  echo "Non-PR event detected. Linting everything."
-  CHANGED_FILES=$(git ls-files '*.ts' '*.tsx')
-fi
+# Ensure full git history is available
+git fetch --unshallow || true
+git fetch origin "${GITHUB_BASE_REF}"
+
+# Get changed files
+CHANGED_FILES=$(git diff --name-only origin/"${GITHUB_BASE_REF}"...HEAD -- '*.ts' '*.tsx')
 
 if [ -z "$CHANGED_FILES" ]; then
-  echo "No TypeScript files changed. Skipping lint."
+  echo "✅ No relevant files changed."
   exit 0
 fi
 
-echo "Linting changed files:"
+echo "🎯 Linting the following files:"
 echo "$CHANGED_FILES"
 
-npm install
-
-npm run lint $CHANGED_FILES
+npx eslint $CHANGED_FILES
