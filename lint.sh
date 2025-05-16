@@ -10,19 +10,11 @@ git fetch origin "${GITHUB_BASE_REF}"
 
 
 
-# Get changed files
-CHANGED_FILES=$(git diff --name-only origin/"${GITHUB_BASE_REF}"...HEAD -- '*.ts' '*.tsx')
-
-
-echo git branch is
-echo "$GITHUB_BASE_REF"
-
-if [ -z "$CHANGED_FILES" ]; then
-  echo "✅ No relevant files changed."
-  exit 0
+#if [ -z "$1" ]; then
+  echo "No files provided. Linting everything."
+  npx eslint .
+else
+  echo "Linting only changed files:"
+  echo "$@"
+  npx eslint "$@"
 fi
-
-echo "🎯 Linting the following files:"
-echo "$CHANGED_FILES"
-
-npx eslint $CHANGED_FILES

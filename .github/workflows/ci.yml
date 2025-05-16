@@ -7,6 +7,21 @@ on:
 
 jobs:
   lint:
-    uses: hironobugt/my-app/.github/workflows/common.yml@main
-    with:
-      lint_script: ./lint.sh
+    if: github.event_name == 'pull_request' && startsWith(github.head_ref, 'env/feature-')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get changed files
+        id: files
+        run: |
+          git fetch origin ${{ github.base_ref }}
+          echo "files=$(git diff --name-only origin/${{ github.base_ref }}...HEAD -- '*.ts' '*.tsx' | paste -sd' ' -)" >> $GITHUB_OUTPUT
+
+      - name: Call common workflow
+        uses: hironobugt/my-app/.github/workflows/common.yml@main
+        with:
+          lint_script: ./lint.
+          lint_args: ${{ steps.files.outputs.files }}
