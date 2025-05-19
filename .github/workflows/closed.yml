@@ -1,0 +1,29 @@
+name: Delete lint-diff-files.txt on PR merge
+
+on:
+  pull_request:
+    types: [closed]
+
+jobs:
+  cleanup:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout merged branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Delete lint-diff-files.txt if exists
+        run: |
+          if [ -f lint-diff-files.txt ]; then
+            git rm lint-diff-files.txt
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -m "chore: remove lint-diff-files.txt after PR merge"
+            git push
+          else
+            echo "lint-diff-files.txt not found"
+          fi
