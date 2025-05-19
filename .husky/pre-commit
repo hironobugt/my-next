@@ -1,1 +1,10 @@
-npm run lint-diff
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+echo "[husky] Updating lint-diff-files.txt..."
+
+git diff --name-only --diff-filter=ACMRTUXB HEAD | grep -E '\.tsx?$' >> lint-diff-files.txt
+sort -u lint-diff-files.txt -o lint-diff-files.txt
+
+echo "[husky] Tracked changed files:"
+cat lint-diff-files.txt
