@@ -12,8 +12,6 @@ if [ -z "$files" ]; then
   exit 0
 fi
 
-npm install
-
 echo "Running ESLint on the following files:"
 echo "$files"
-npm run lint $files
+npx eslint $files
