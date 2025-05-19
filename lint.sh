@@ -20,6 +20,7 @@ if ! git merge-base --is-ancestor origin/"$BASE_BRANCH" HEAD; then
   exit 1
 fi
 
+
 # 差分ファイルを取得
 changed_files=$(git diff --name-only "origin/$BASE_BRANCH"...HEAD -- '*.js' '*.jsx' '*.ts' '*.tsx')
 
