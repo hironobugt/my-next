@@ -14,4 +14,4 @@ fi
 
 echo "Running ESLint on the following files:"
 echo "$files"
-npx eslint $files
+npm run lint $files
