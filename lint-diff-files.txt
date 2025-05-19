@@ -1,1 +1,2 @@
 lib/calc.ts
+lib/math.ts
