@@ -2,13 +2,10 @@
 'use client'
 
 import { useState } from 'react'
+import { sum } from '../lib/math' // 相対パスでインポート
 
 export default function Home() {
   const [count, setCount] = useState(0)
-
-  const sum = (a: number, b: number): number => {
-    return a + b
-  }
 
   const handleClick = () => {
     setCount((prev) => sum(prev, 1))
