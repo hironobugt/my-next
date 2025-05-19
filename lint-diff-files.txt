@@ -1,2 +1,3 @@
 app/page.tsx
+lib/calc.ts
 lib/math.ts
