@@ -6,6 +6,7 @@ import { sum } from '../lib/math' // 相対パスでインポート
 export default function Home() {
   const [count, setCount] = useState(0)
 
+  
   const handleClick = () => {
     setCount((prev) => sum(prev, 1))
   }
