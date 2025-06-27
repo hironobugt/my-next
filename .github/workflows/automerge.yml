@@ -68,9 +68,10 @@ jobs:
               ;;
           esac
 
-          echo "Authorization: Bearer $SLACK_BOT_TOKEN"
-
           curl -X POST https://slack.com/api/chat.postMessage \
-                -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
-                -H 'Content-type: application/json; charset=utf-8' \
-                --data "{\"channel\": \"C091NGAD1AM\", \"text\": \"Hello from GitHub Actions!\"}"
+            -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
+            -H 'Content-type: application/json; charset=utf-8' \
+            --data "{
+              \"channel\": \"C091NGAD1AM\",
+              \"text\": \"$MESSAGE\"
+            }"
