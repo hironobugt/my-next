@@ -1,0 +1,77 @@
+name: Merge dev into dev1 and notify Slack
+
+on:
+  schedule:
+    - cron: '0 4 * * 1-5'  # UTCで13:00 JST → UTC+9時間なので4:00 UTC
+  workflow_dispatch:
+
+jobs:
+  merge-and-notify:
+    runs-on: ubuntu-latest
+
+    env:
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: dev1  # dev1ブランチをベースにチェックアウト
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Add dev as remote branch
+        run: git fetch origin dev
+
+      - name: Try merging dev into dev1
+        id: merge
+        run: |
+          set +e
+          git merge origin/dev --no-commit --no-ff > merge_result.txt 2>&1
+          MERGE_STATUS=$?
+          set -e
+          echo "merge_status=$MERGE_STATUS" >> $GITHUB_OUTPUT
+          cat merge_result.txt
+
+      - name: Check merge status
+        id: check
+        run: |
+          if [ "${{ steps.merge.outputs.merge_status }}" = "0" ]; then
+            if git diff --quiet; then
+              echo "result=no-diff" >> $GITHUB_OUTPUT
+            else
+              echo "result=merged" >> $GITHUB_OUTPUT
+              git commit -m "Auto-merged dev into dev1"
+              git push origin dev1
+            fi
+          else
+            echo "result=conflict" >> $GITHUB_OUTPUT
+          fi
+      - name: Send Slack message via API
+        run: |
+          RESULT="${{ steps.result.outputs.result }}"
+          case "$RESULT" in
+            merged)
+              MESSAGE="✅ dev を dev1 にマージしました。"
+              ;;
+            no-diff)
+              MESSAGE="🔁 差分はありませんでした。"
+              ;;
+            conflict)
+              MESSAGE="❌ コンフリクトが発生しました。手動で解決してください。"
+              ;;
+            *)
+              MESSAGE="⚠️ 状態を判定できませんでした。"
+              ;;
+          esac
+
+          curl -X POST https://slack.com/api/chat.postMessage \
+            -H "Authorization: Bearer ${{ secrets.SLACK_BOT_TOKEN }}" \
+            -H 'Content-type: application/json' \
+            --data "{
+              \"channel\": \"C091NGAD1AM\",
+              \"text\": \"$MESSAGE\"
+            }"
