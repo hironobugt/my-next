@@ -43,7 +43,7 @@ jobs:
               echo "マージする変更がありませんでした"
             else
               echo "result=merged" >> $GITHUB_OUTPUT
-              git commit -m "Auto-merged dev into dev1 [$(date +'%Y-%m-%d %H:%M:%S')]"
+              git commit -m "Auto-merged dev into dev1 [$(TZ=Asia/Tokyo date +'%Y-%m-%d %H:%M:%S')]"
               git push origin dev1
               echo "マージが完了しました"
             fi
@@ -96,7 +96,7 @@ jobs:
                     },
                     {
                       \"title\": \"実行時刻\",
-                      \"value\": \"$(date +'%Y-%m-%d %H:%M:%S')\",
+                      \"value\": \"$(TZ=Asia/Tokyo date +'%Y-%m-%d %H:%M:%S')\",
                       \"short\": true
                     },
                     {
