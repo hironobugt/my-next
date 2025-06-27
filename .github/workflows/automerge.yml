@@ -62,19 +62,19 @@ jobs:
           
           case "$RESULT" in
             merged)
-              MESSAGE="@dev_all ✅ dev を dev1 にマージしました。"
+              MESSAGE="@dev_all\n✅ dev を dev1 にマージしました。"
               COLOR="good"
               ;;
             no-diff)
-              MESSAGE="@dev_all ℹ️ マージする差分はありませんでした。"
+              MESSAGE="@dev_all\nℹ️ マージする差分はありませんでした。"
               COLOR="warning"
               ;;
             conflict)
-              MESSAGE="@dev_all ❌ コンフリクトが発生しました。手動で解決してください。"
+              MESSAGE="@dev_all\n❌ コンフリクトが発生しました。手動で解決してください。"
               COLOR="danger"
               ;;
             *)
-              MESSAGE="@dev_all ⚠️ 状態を判定できませんでした。ログを確認してください。"
+              MESSAGE="@dev_all\n⚠️ 状態を判定できませんでした。ログを確認してください。"
               COLOR="danger"
               ;;
           esac
