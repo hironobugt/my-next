@@ -83,7 +83,7 @@ jobs:
             -H "Authorization: Bearer ${SLACK_BOT_TOKEN}" \
             -H 'Content-type: application/json; charset=utf-8' \
             --data "{
-              \"channel\": \"C091NGAD1AM\",
+              \"channel\": \"C0939G00VFF\",
               \"text\": \"$MESSAGE\",
               \"attachments\": [
                 {
