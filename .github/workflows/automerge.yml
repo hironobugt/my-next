@@ -1,76 +1,191 @@
-name: Merge dev into dev1 and notify Slack
+name: Auto Merge dev1 to dev
 
 on:
   schedule:
-    - cron: '0 4 * * 1-5'  # UTCで13:00 JST → UTC+9時間なので4:00 UTC
-  workflow_dispatch:
+    # 月曜日から金曜日の13:00 JST (04:00 UTC)
+    - cron: '0 4 * * 1-5'
+  workflow_dispatch: # 手動実行も可能
 
 jobs:
-  merge-and-notify:
+  auto-merge:
     runs-on: ubuntu-latest
-    env:
-      SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
-
-
+    
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          ref: dev1  # dev1ブランチをベースにチェックアウト
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Configure Git
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+    - name: Configure Git
+      run: |
+        git config --global user.name "github-actions[bot]"
+        git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Add dev as remote branch
-        run: git fetch origin dev
+    - name: Send Slack notification - Start
+      run: |
+        curl -X POST -H 'Authorization: Bearer ${{ secrets.SLACK_BOT_TOKEN }}' \
+        -H 'Content-type: application/json' \
+        --data '{
+          "channel": "#general",
+          "text": "🚀 自動マージプロセスを開始します",
+          "attachments": [
+            {
+              "color": "#36a64f",
+              "fields": [
+                {
+                  "title": "ブランチ",
+                  "value": "dev1 → dev",
+                  "short": true
+                },
+                {
+                  "title": "開始時刻",
+                  "value": "'$(date +"%Y-%m-%d %H:%M:%S")'",
+                  "short": true
+                },
+                {
+                  "title": "リポジトリ",
+                  "value": "${{ github.repository }}",
+                  "short": true
+                }
+              ]
+            }
+          ]
+        }' \
+        https://slack.com/api/chat.postMessage
 
-      - name: Try merging dev into dev1
-        id: merge
-        run: |
-          set +e
-          git merge origin/dev --allow-unrelated-histories --no-commit --no-ff > merge_result.txt 2>&1
-          MERGE_STATUS=$?
-          set -e
-          echo "merge_status=$MERGE_STATUS" >> $GITHUB_OUTPUT
-          cat merge_result.txt
+    - name: Fetch latest changes
+      run: |
+        git fetch origin dev1
+        git fetch origin dev
 
-      - name: Check merge status
-        id: check
-        run: |
-          if [ "${{ steps.merge.outputs.merge_status }}" = "0" ]; then
-            if git diff --quiet; then
-              echo "result=no-diff" >> $GITHUB_OUTPUT
-            else
-              echo "result=merged" >> $GITHUB_OUTPUT
-              git commit -m "Auto-merged dev into dev1"
-              git push origin dev1
-            fi
-          else
-            echo "result=conflict" >> $GITHUB_OUTPUT
-          fi
-      - name: Send Slack message via API
-        run: |
-          RESULT="${{ steps.result.outputs.result }}"
-          case "$RESULT" in
-            merged)
-              MESSAGE="dev を dev1 にマージしました。"
-              ;;
-            no-diff)
-              MESSAGE="差分はありませんでした。"
-              ;;
-            conflict)
-              MESSAGE="コンフリクトが発生しました。手動で解決してください。"
-              ;;
-            *)
-              MESSAGE="状態を判定できませんでした。"
-              ;;
-          esac
+    - name: Check if dev1 has new commits
+      id: check_commits
+      run: |
+        git checkout dev
+        BEHIND_COUNT=$(git rev-list --count dev..origin/dev1)
+        echo "behind_count=$BEHIND_COUNT" >> $GITHUB_OUTPUT
+        echo "dev1ブランチは${BEHIND_COUNT}コミット先行しています"
 
-          echo "Authorization: Bearer ${{ SLACK_BOT_TOKEN }}"
+    - name: Get latest commit info from dev1
+      if: steps.check_commits.outputs.behind_count > 0
+      id: commit_info
+      run: |
+        LATEST_COMMIT=$(git log origin/dev1 --oneline -1)
+        echo "latest_commit=$LATEST_COMMIT" >> $GITHUB_OUTPUT
 
-          curl -X POST https://slack.com/api/chat.postMessage \
-                -H "Authorization: Bearer ${{ SLACK_BOT_TOKEN }}" \
-                -H 'Content-type: application/json; charset=utf-8' \
-                --data "{\"channel\": \"C091NGAD1AM\", \"text\": \"Hello from GitHub Actions!\"}"
+    - name: Merge dev1 to dev
+      if: steps.check_commits.outputs.behind_count > 0
+      run: |
+        git checkout dev
+        git merge origin/dev1 --no-ff -m "Auto merge: dev1 to dev [$(date +'%Y-%m-%d %H:%M:%S')]"
+        git push origin dev
+
+    - name: Send Slack notification - Success
+      if: success() && steps.check_commits.outputs.behind_count > 0
+      run: |
+        curl -X POST -H 'Authorization: Bearer ${{ secrets.SLACK_BOT_TOKEN }}' \
+        -H 'Content-type: application/json' \
+        --data '{
+          "channel": "#general",
+          "text": "✅ 自動マージが正常に完了しました",
+          "attachments": [
+            {
+              "color": "#36a64f",
+              "fields": [
+                {
+                  "title": "ブランチ",
+                  "value": "dev1 → dev",
+                  "short": true
+                },
+                {
+                  "title": "マージされたコミット数",
+                  "value": "${{ steps.check_commits.outputs.behind_count }}",
+                  "short": true
+                },
+                {
+                  "title": "最新コミット",
+                  "value": "${{ steps.commit_info.outputs.latest_commit }}",
+                  "short": false
+                },
+                {
+                  "title": "リポジトリ",
+                  "value": "${{ github.repository }}",
+                  "short": false
+                }
+              ]
+            }
+          ]
+        }' \
+        https://slack.com/api/chat.postMessage
+
+    - name: Send Slack notification - No changes
+      if: success() && steps.check_commits.outputs.behind_count == 0
+      run: |
+        curl -X POST -H 'Authorization: Bearer ${{ secrets.SLACK_BOT_TOKEN }}' \
+        -H 'Content-type: application/json' \
+        --data '{
+          "channel": "#general",
+          "text": "ℹ️ マージする新しいコミットがありませんでした",
+          "attachments": [
+            {
+              "color": "#ffcc00",
+              "fields": [
+                {
+                  "title": "ブランチ",
+                  "value": "dev1 → dev",
+                  "short": true
+                },
+                {
+                  "title": "ステータス",
+                  "value": "変更なし",
+                  "short": true
+                },
+                {
+                  "title": "確認時刻",
+                  "value": "'$(date +"%Y-%m-%d %H:%M:%S")'",
+                  "short": true
+                }
+              ]
+            }
+          ]
+        }' \
+        https://slack.com/api/chat.postMessage
+
+    - name: Send Slack notification - Failure
+      if: failure()
+      run: |
+        curl -X POST -H 'Authorization: Bearer ${{ secrets.SLACK_BOT_TOKEN }}' \
+        -H 'Content-type: application/json' \
+        --data '{
+          "channel": "#general",
+          "text": "❌ 自動マージでエラーが発生しました",
+          "attachments": [
+            {
+              "color": "#ff0000",
+              "fields": [
+                {
+                  "title": "ブランチ",
+                  "value": "dev1 → dev",
+                  "short": true
+                },
+                {
+                  "title": "エラー時刻",
+                  "value": "'$(date +"%Y-%m-%d %H:%M:%S")'",
+                  "short": true
+                },
+                {
+                  "title": "エラー内容",
+                  "value": "マージプロセスが失敗しました。コンフリクトまたは権限の問題が考えられます。",
+                  "short": false
+                },
+                {
+                  "title": "ワークフロー詳細",
+                  "value": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+                  "short": false
+                }
+              ]
+            }
+          ]
+        }' \
+        https://slack.com/api/chat.postMessage
