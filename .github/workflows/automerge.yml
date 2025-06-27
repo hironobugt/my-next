@@ -55,24 +55,23 @@ jobs:
           RESULT="${{ steps.result.outputs.result }}"
           case "$RESULT" in
             merged)
-              MESSAGE="✅ dev を dev1 にマージしました。"
+              MESSAGE="dev を dev1 にマージしました。"
               ;;
             no-diff)
-              MESSAGE="🔁 差分はありませんでした。"
+              MESSAGE="差分はありませんでした。"
               ;;
             conflict)
-              MESSAGE="❌ コンフリクトが発生しました。手動で解決してください。"
+              MESSAGE="コンフリクトが発生しました。手動で解決してください。"
               ;;
             *)
-              MESSAGE="⚠️ 状態を判定できませんでした。"
+              MESSAGE="状態を判定できませんでした。"
               ;;
           esac
 
           curl -X POST https://slack.com/api/chat.postMessage \
             -H "Authorization: Bearer ${{ secrets.SLACK_BOT_TOKEN }}" \
-            -H 'Content-type: application/json' \
+            -H 'Content-type: application/json; charset=utf-8' \
             --data "{
               \"channel\": \"C091NGAD1AM\",
               \"text\": \"$MESSAGE\"
-              \"token\": \"${{ secrets.SLACK_BOT_TOKEN }}\"
             }"
