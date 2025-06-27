@@ -2,28 +2,26 @@ name: Merge dev into dev1 and notify Slack
 
 on:
   schedule:
-    - cron: '0 4 * * 1-5'  # UTCで13:00 JST → UTC+9時間なので4:00 UTC
+    - cron: '0 4 * * 1-5' # UTCで13:00 JST → UTC+9時間なので4:00 UTC
   workflow_dispatch:
 
 jobs:
   merge-and-notify:
     runs-on: ubuntu-latest
-    env:
-      SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
-
-
+    
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          ref: dev1  # dev1ブランチをベースにチェックアウト
+          ref: dev1 # dev1ブランチをベースにチェックアウト
+          fetch-depth: 0 # 全履歴を取得
 
       - name: Configure Git
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Add dev as remote branch
+      - name: Fetch dev branch
         run: git fetch origin dev
 
       - name: Try merging dev into dev1
@@ -36,42 +34,107 @@ jobs:
           echo "merge_status=$MERGE_STATUS" >> $GITHUB_OUTPUT
           cat merge_result.txt
 
-      - name: Check merge status
+      - name: Check merge status and commit
         id: check
         run: |
           if [ "${{ steps.merge.outputs.merge_status }}" = "0" ]; then
-            if git diff --quiet; then
+            if git diff --cached --quiet; then
               echo "result=no-diff" >> $GITHUB_OUTPUT
+              echo "マージする変更がありませんでした"
             else
               echo "result=merged" >> $GITHUB_OUTPUT
-              git commit -m "Auto-merged dev into dev1"
+              git commit -m "Auto-merged dev into dev1 [$(date +'%Y-%m-%d %H:%M:%S')]"
               git push origin dev1
+              echo "マージが完了しました"
             fi
           else
             echo "result=conflict" >> $GITHUB_OUTPUT
+            git merge --abort || true
+            echo "コンフリクトが発生しました"
           fi
-      - name: Send Slack message via API
+
+      - name: Send Slack notification
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
         run: |
-          RESULT="${{ steps.result.outputs.result }}"
+          RESULT="${{ steps.check.outputs.result }}"
+          echo "Result: $RESULT"
+          
           case "$RESULT" in
             merged)
-              MESSAGE="dev を dev1 にマージしました。"
+              MESSAGE="✅ dev を dev1 にマージしました。"
+              COLOR="good"
               ;;
             no-diff)
-              MESSAGE="差分はありませんでした。"
+              MESSAGE="ℹ️ マージする差分はありませんでした。"
+              COLOR="warning"
               ;;
             conflict)
-              MESSAGE="コンフリクトが発生しました。手動で解決してください。"
+              MESSAGE="❌ コンフリクトが発生しました。手動で解決してください。"
+              COLOR="danger"
               ;;
             *)
-              MESSAGE="状態を判定できませんでした。"
+              MESSAGE="⚠️ 状態を判定できませんでした。ログを確認してください。"
+              COLOR="danger"
               ;;
           esac
 
           curl -X POST https://slack.com/api/chat.postMessage \
-            -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
+            -H "Authorization: Bearer ${SLACK_BOT_TOKEN}" \
             -H 'Content-type: application/json; charset=utf-8' \
             --data "{
               \"channel\": \"C091NGAD1AM\",
-              \"text\": \"$MESSAGE\"
+              \"text\": \"$MESSAGE\",
+              \"attachments\": [
+                {
+                  \"color\": \"$COLOR\",
+                  \"fields\": [
+                    {
+                      \"title\": \"ブランチ\",
+                      \"value\": \"dev → dev1\",
+                      \"short\": true
+                    },
+                    {
+                      \"title\": \"実行時刻\",
+                      \"value\": \"$(date +'%Y-%m-%d %H:%M:%S')\",
+                      \"short\": true
+                    },
+                    {
+                      \"title\": \"リポジトリ\",
+                      \"value\": \"${{ github.repository }}\",
+                      \"short\": true
+                    }
+                  ]
+                }
+              ]
+            }"
+
+      - name: Send failure notification
+        if: failure()
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+        run: |
+          curl -X POST https://slack.com/api/chat.postMessage \
+            -H "Authorization: Bearer ${SLACK_BOT_TOKEN}" \
+            -H 'Content-type: application/json; charset=utf-8' \
+            --data "{
+              \"channel\": \"C091NGAD1AM\",
+              \"text\": \"❌ ワークフローでエラーが発生しました\",
+              \"attachments\": [
+                {
+                  \"color\": \"danger\",
+                  \"fields\": [
+                    {
+                      \"title\": \"エラー内容\",
+                      \"value\": \"ワークフロー実行中にエラーが発生しました。詳細はGitHub Actionsのログを確認してください。\",
+                      \"short\": false
+                    },
+                    {
+                      \"title\": \"ワークフロー\",
+                      \"value\": \"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\",
+                      \"short\": false
+                    }
+                  ]
+                }
+              ]
             }"
