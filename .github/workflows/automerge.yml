@@ -30,7 +30,7 @@ jobs:
         id: merge
         run: |
           set +e
-          git merge origin/dev --no-commit --no-ff > merge_result.txt 2>&1
+          git merge origin/dev --allow-unrelated-histories --no-commit --no-ff > merge_result.txt 2>&1
           MERGE_STATUS=$?
           set -e
           echo "merge_status=$MERGE_STATUS" >> $GITHUB_OUTPUT
