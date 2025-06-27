@@ -74,4 +74,5 @@ jobs:
             --data "{
               \"channel\": \"C091NGAD1AM\",
               \"text\": \"$MESSAGE\"
+              \"token\": \"${{ secrets.SLACK_BOT_TOKEN }}\"
             }"
