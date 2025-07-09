@@ -18,15 +18,20 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.base.ref }}
           token: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Remove lint-diff-files.txt if it exists
         run: |
-          if [ -f lint-diff-files.txt ]; then
-            git rm lint-diff-files.txt
+          FILES_TO_DELETE=()
+          for FILE in lint-diff-files.txt related-files.txt; do
+            if [ -f "$FILE" ]; then
+              git rm "$FILE"
+              FILES_TO_DELETE+=("$FILE")
+            fi
+          done
+          if [ ${#FILES_TO_DELETE[@]} -gt 0 ]; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git commit -m "chore: remove lint-diff-files.txt after PR merge"
+            git commit -m "chore: remove ${FILES_TO_DELETE[*]} after PR merge"
             git push
           else
-            echo "lint-diff-files.txt not found"
+            echo "No files to delete"
           fi
