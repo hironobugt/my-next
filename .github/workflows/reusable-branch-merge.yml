@@ -1,0 +1,124 @@
+name: Reusable Merge Workflow
+
+on:
+  workflow_call:
+    inputs:
+      from_branch:
+        required: true
+        type: string
+      to_branch:
+        required: true
+        type: string
+      slack_channel_id:
+        required: true
+        type: string
+    secrets:
+      SLACK_BOT_TOKEN:
+        required: true
+
+jobs:
+  merge-and-notify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout target branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.to_branch }}
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Fetch source branch
+        run: git fetch origin ${{ inputs.from_branch }}
+
+      - name: Try merging
+        id: merge
+        run: |
+          set +e
+          git merge origin/${{ inputs.from_branch }} --no-commit --no-ff > merge_result.txt 2>&1
+          MERGE_STATUS=$?
+          set -e
+          echo "merge_status=$MERGE_STATUS" >> "$GITHUB_OUTPUT"
+          cat merge_result.txt
+
+      - name: Commit and push if needed
+        id: check
+        run: |
+          if [ "${{ steps.merge.outputs.merge_status }}" = "0" ]; then
+            if git diff --cached --quiet; then
+              echo "result=no-diff" >> "$GITHUB_OUTPUT"
+            else
+              echo "result=merged" >> "$GITHUB_OUTPUT"
+              git commit -m "Auto-merged ${{ inputs.from_branch }} into ${{ inputs.to_branch }} [$(TZ=Asia/Tokyo date +'%Y-%m-%d %H:%M:%S')]"
+              git push origin ${{ inputs.to_branch }}
+            fi
+          else
+            echo "result=conflict" >> "$GITHUB_OUTPUT"
+            git merge --abort || true
+          fi
+
+      - name: Send Slack notification
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+        run: |
+          RESULT="${{ steps.check.outputs.result }}"
+          FROM="${{ inputs.from_branch }}"
+          TO="${{ inputs.to_branch }}"
+          
+          case "$RESULT" in
+            merged)
+              MESSAGE="✅ *${FROM} → ${TO}* にマージされました。"
+              COLOR="good"
+              ;;
+            no-diff)
+              MESSAGE="ℹ️ *${FROM} → ${TO}* のマージ対象に差分はありませんでした。"
+              COLOR="warning"
+              ;;
+            conflict)
+              MESSAGE="❌ *${FROM} → ${TO}* でマージコンフリクトが発生しました。"
+              COLOR="danger"
+              ;;
+            *)
+              MESSAGE="⚠️ *${FROM} → ${TO}* の状態を判定できませんでした。"
+              COLOR="danger"
+              ;;
+          esac
+
+          curl -X POST https://slack.com/api/chat.postMessage \
+            -H "Authorization: Bearer ${SLACK_BOT_TOKEN}" \
+            -H 'Content-type: application/json; charset=utf-8' \
+            --data "{
+              \"channel\": \"${{ inputs.slack_channel_id }}\",
+              \"text\": \"$MESSAGE\",
+              \"attachments\": [
+                {
+                  \"color\": \"$COLOR\",
+                  \"fields\": [
+                    {
+                      \"title\": \"ブランチ\",
+                      \"value\": \"${FROM} → ${TO}\",
+                      \"short\": true
+                    },
+                    {
+                      \"title\": \"リポジトリ\",
+                      \"value\": \"${{ github.repository }}\",
+                      \"short\": true
+                    },
+                    {
+                      \"title\": \"実行時刻\",
+                      \"value\": \"$(TZ=Asia/Tokyo date +'%Y-%m-%d %H:%M:%S')\",
+                      \"short\": true
+                    },
+                    {
+                      \"title\": \"ログ\",
+                      \"value\": \"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\",
+                      \"short\": false
+                    }
+                  ]
+                }
+              ]
+            }"

@@ -1,0 +1,16 @@
+name: Merge dev1 into dev4
+
+on:
+  schedule:
+    - cron: '0 5 * * 1-5'
+  workflow_dispatch:
+
+jobs:
+  merge:
+    uses: your-org/example-tools-repo/.github/workflows/reusable-branch-merge.yml@main
+    with:
+      from_branch: dev1
+      to_branch: dev4
+      slack_channel_id: C0939G00VFF
+    secrets:
+      SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
