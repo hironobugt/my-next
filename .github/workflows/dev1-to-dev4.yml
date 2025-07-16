@@ -7,7 +7,7 @@ on:
 
 jobs:
   merge:
-    uses: your-org/example-tools-repo/.github/workflows/reusable-branch-merge.yml@main
+    uses: hironobugt/my-next/.github/workflows/reusable-branch-merge.yml@main
     with:
       from_branch: dev1
       to_branch: dev4
