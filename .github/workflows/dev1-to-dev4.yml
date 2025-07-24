@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: '0 5 * * 1-5'
   workflow_dispatch:
+      inputs:
+          to_branch:
+            description: 'Branch to merge into'
+            required: true
+            default: 'dev4'
 
 jobs:
   merge:
