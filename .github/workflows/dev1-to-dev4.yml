@@ -8,7 +8,11 @@ on:
           to_branch:
             description: 'Branch to merge into'
             required: true
-            default: 'dev4'
+            type: choice
+            options:
+              - dev2
+              - dev3
+              - dev4
 
 jobs:
   merge:
