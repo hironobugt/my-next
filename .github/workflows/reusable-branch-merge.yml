@@ -17,6 +17,8 @@ on:
         required: true
       PAT_TOKEN:
         required: true
+      RED_TOKEN:
+        required: true
 
 jobs:
   merge-and-notify:
@@ -73,7 +75,7 @@ jobs:
         id: cpr
         uses: peter-evans/create-pull-request@v6
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.RED_TOKEN }}
           branch: auto/merge-${{ inputs.from_branch }}-into-${{ inputs.to_branch }}
           base: ${{ inputs.to_branch }}
           title: "Auto: Merge ${{ inputs.from_branch }} into ${{ inputs.to_branch }}"
