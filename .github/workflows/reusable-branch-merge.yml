@@ -15,6 +15,8 @@ on:
     secrets:
       SLACK_BOT_TOKEN:
         required: true
+      PAT_TOKEN:
+        required: true
 
 jobs:
   merge-and-notify:
@@ -54,12 +56,39 @@ jobs:
             else
               echo "result=merged" >> "$GITHUB_OUTPUT"
               git commit -m "Auto-merged ${{ inputs.from_branch }} into ${{ inputs.to_branch }} [$(TZ=Asia/Tokyo date +'%Y-%m-%d %H:%M:%S')]"
-              git push origin ${{ inputs.to_branch }}
+              MERGE_BRANCH="auto/merge-${{ inputs.from_branch }}-into-${{ inputs.to_branch }}"
+              git checkout -b "$MERGE_BRANCH"
+              git push origin "$MERGE_BRANCH"
             fi
           else
             echo "result=conflict" >> "$GITHUB_OUTPUT"
             git merge --abort || true
           fi
+
+      - name: Create Pull Request if merged
+        if: steps.check.outputs.result == 'merged'
+        id: cpr
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.PAT_TOKEN }}
+          branch: auto/merge-${{ inputs.from_branch }}-into-${{ inputs.to_branch }}
+          base: ${{ inputs.to_branch }}
+          title: "Auto: Merge ${{ inputs.from_branch }} into ${{ inputs.to_branch }}"
+          body: "This PR was automatically created by the workflow to merge `${{ inputs.from_branch }}` into `${{ inputs.to_branch }}`."
+
+      - name: Auto approve PR
+        if: steps.cpr.outputs.pull-request-url != ''
+        uses: hmarr/auto-approve-action@v4
+        with:
+          github-token: ${{ secrets.PAT_TOKEN }}
+
+      - name: Enable auto-merge
+        if: steps.cpr.outputs.pull-request-url != ''
+        uses: peter-evans/enable-pull-request-automerge@v3
+        with:
+          token: ${{ secrets.PAT_TOKEN }}
+          pull-request-number: ${{ steps.cpr.outputs.pull-request-number }}
+          merge-method: squash
 
       - name: Send Slack notification
         env:
