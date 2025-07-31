@@ -63,7 +63,7 @@ jobs:
               # 一時ファイルを除外
               git reset HEAD merge_result.txt || true
               git rm --cached merge_result.txt || true
-              git push origin "$MERGE_BRANCH"
+              git push -f origin "$MERGE_BRANCH"
             fi
           else
             echo "result=conflict" >> "$GITHUB_OUTPUT"
