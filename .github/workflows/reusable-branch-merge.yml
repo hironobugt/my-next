@@ -70,16 +70,23 @@ jobs:
             git merge --abort || true
           fi
 
-      - name: Create Pull Request if merged
-        if: steps.check.outputs.result == 'merged'
+      - name: Try merging and create PR
         id: cpr
         uses: peter-evans/create-pull-request@v6
         with:
-          token: ${{ secrets.RED_TOKEN }}
-          branch: auto/merge-${{ inputs.from_branch }}-into-${{ inputs.to_branch }}
+          token: ${{ secrets.PAT_TOKEN }}
           base: ${{ inputs.to_branch }}
+          branch: auto/merge-${{ inputs.from_branch }}-into-${{ inputs.to_branch }}
           title: "Auto: Merge ${{ inputs.from_branch }} into ${{ inputs.to_branch }}"
           body: "This PR was automatically created by the workflow to merge `${{ inputs.from_branch }}` into `${{ inputs.to_branch }}`."
+          commit-message: "Auto-merged ${{ inputs.from_branch }} into ${{ inputs.to_branch }} [$(TZ=Asia/Tokyo date +'%Y-%m-%d %H:%M:%S')]"
+          delete-branch: true
+          # ここでmergeコマンドを指定
+          push-to-fork: false
+          # 追加: mergeコマンド
+          merge: |
+            git fetch origin ${{ inputs.from_branch }}
+            git merge origin/${{ inputs.from_branch }} --no-ff --no-edit
 
       - name: Auto approve PR
         if: steps.cpr.outputs.pull-request-url != ''
