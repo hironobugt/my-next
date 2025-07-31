@@ -15,8 +15,6 @@ on:
     secrets:
       SLACK_BOT_TOKEN:
         required: true
-      PAT_TOKEN:
-        required: true
 
 jobs:
   merge-and-notify:
@@ -58,6 +56,9 @@ jobs:
               git commit -m "Auto-merged ${{ inputs.from_branch }} into ${{ inputs.to_branch }} [$(TZ=Asia/Tokyo date +'%Y-%m-%d %H:%M:%S')]"
               MERGE_BRANCH="auto/merge-${{ inputs.from_branch }}-into-${{ inputs.to_branch }}"
               git checkout -b "$MERGE_BRANCH"
+              # 一時ファイルを除外
+              git reset HEAD merge_result.txt || true
+              git rm --cached merge_result.txt || true
               git push origin "$MERGE_BRANCH"
             fi
           else
@@ -70,7 +71,7 @@ jobs:
         id: cpr
         uses: peter-evans/create-pull-request@v6
         with:
-          token: ${{ secrets.PAT_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           branch: auto/merge-${{ inputs.from_branch }}-into-${{ inputs.to_branch }}
           base: ${{ inputs.to_branch }}
           title: "Auto: Merge ${{ inputs.from_branch }} into ${{ inputs.to_branch }}"
