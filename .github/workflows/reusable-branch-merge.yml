@@ -17,8 +17,6 @@ on:
         required: true
       PAT_TOKEN:  # PR作成用（ユーザーA）
         required: true
-      RED_TOKEN:  # PR承認・マージ用（ユーザーB）
-        required: true
 
 jobs:
   merge-and-notify:
@@ -28,7 +26,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          token: ${{ secrets.RED_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
 
       - name: Configure Git
@@ -69,7 +67,7 @@ jobs:
         if: steps.diff_check.outputs.result == 'can-merge'
         id: create_pr
         env:
-          GH_TOKEN: ${{ secrets.RED_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           PR_TITLE="Auto-merge: ${{ inputs.from_branch }} → ${{ inputs.to_branch }}"
           PR_BODY="Automated merge from ${{ inputs.from_branch }} to ${{ inputs.to_branch }}"
