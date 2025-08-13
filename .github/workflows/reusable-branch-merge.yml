@@ -103,7 +103,7 @@ jobs:
         if: steps.diff_check.outputs.result == 'can-merge' && steps.create_pr.outputs.pr_number
         id: approve_pr
         env:
-          GH_TOKEN: ${{ secrets.PAT_TOKEN }} #
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }} #
         run: |
           set +e
           gh pr review ${{ steps.create_pr.outputs.pr_number }} --approve --body "Automated approval for auto-merge"
@@ -122,7 +122,7 @@ jobs:
         if: steps.diff_check.outputs.result == 'can-merge' && steps.create_pr.outputs.pr_number && steps.approve_pr.outputs.approved == 'true'
         id: merge_pr
         env:
-          GH_TOKEN: ${{ secrets.PAT_TOKEN }} #
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }} #
         run: |
           # 少し待機（承認が反映されるまで）
           sleep 5
